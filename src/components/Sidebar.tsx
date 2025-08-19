@@ -17,7 +17,6 @@ const Sidebar: React.FC = () => {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [userRole, setUserRole] = useState<string>('user');
   
 
   // Load unread notifications count
@@ -39,13 +38,6 @@ const Sidebar: React.FC = () => {
     }
   }, [user]);
 
-  // Load user role
-  React.useEffect(() => {
-    if (user) {
-      loadUserRole();
-    }
-  }, [user]);
-
   const loadUnreadCount = async () => {
     if (!user) return;
 
@@ -60,29 +52,6 @@ const Sidebar: React.FC = () => {
       setUnreadCount(count || 0);
     } catch (error) {
       console.error('Error loading unread count:', error);
-    }
-  };
-
-  const loadUserRole = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (error || !data) {
-        // If no role found or error, default to 'user'
-        setUserRole('user');
-        return;
-      }
-
-      setUserRole(data.role || 'user');
-    } catch (error) {
-      console.error('Error loading user role:', error);
-      setUserRole('user');
     }
   };
 
@@ -163,20 +132,6 @@ const Sidebar: React.FC = () => {
 
       {/* User Actions */}
       <div className={`p-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-        {(userRole === 'admin' || userRole === 'moderator') && (
-          <Link
-            to={userRole === 'admin' ? '/admin' : '/moderator'}
-            className={`flex items-center space-x-3 w-full px-4 py-3 mb-3 rounded-xl transition-all duration-200 group border ${
-              isDarkMode 
-                ? 'text-gray-300 hover:bg-purple-900 hover:text-purple-400 hover:bg-opacity-20 border-gray-600 hover:border-purple-400' 
-                : 'text-gray-600 hover:bg-purple-50 hover:text-purple-600 border-gray-200 hover:border-purple-300'
-            }`}
-          >
-            <Shield className={`w-5 h-5 ${isDarkMode ? 'text-gray-400 group-hover:text-purple-400' : 'text-gray-400 group-hover:text-purple-600'}`} />
-            <span className="font-medium">{userRole === 'admin' ? 'Admin Panel' : 'Moderator Panel'}</span>
-          </Link>
-        )}
-        
         <button
           onClick={() => setShowProfile(true)}
           className={`flex items-center space-x-3 w-full px-4 py-3 mb-3 rounded-xl transition-all duration-200 group border ${
