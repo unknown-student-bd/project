@@ -71,15 +71,15 @@ const Sidebar: React.FC = () => {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        // If no role found, default to 'user'
+      if (error || !data) {
+        // If no role found or error, default to 'user'
         setUserRole('user');
         return;
       }
 
-      setUserRole(data?.role || 'user');
+      setUserRole(data.role || 'user');
     } catch (error) {
       console.error('Error loading user role:', error);
       setUserRole('user');

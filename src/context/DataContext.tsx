@@ -74,7 +74,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('user_settings')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (tasksData) setTasks(tasksData);
       if (examsData) setExams(examsData);
@@ -83,6 +83,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           workTime: settingsData.work_time,
           breakTime: settingsData.break_time
         });
+      } else {
+        // Create default settings if none exist
+        const { error: insertError } = await supabase
+          .from('user_settings')
+          .insert({
+            user_id: user.id,
+            work_time: 25,
+            break_time: 5
+          });
+
+        if (insertError) {
+          console.error('Error creating default user settings:', insertError);
+        }
       }
     } catch (error) {
       console.error('Error loading user data:', error);

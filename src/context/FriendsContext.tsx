@@ -68,15 +68,9 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loadFriends = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
+    const { data: friendsData, error } = await supabase
       .from('friends')
-      .select(`
-        id,
-        user_id,
-        friend_id,
-        created_at,
-        friend:users!friends_friend_id_fkey(name, email)
-      `)
+      .select('id, user_id, friend_id, created_at')
       .eq('user_id', user.id);
 
     if (error) {
@@ -84,31 +78,45 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    const friendsData = data?.map(f => ({
-      id: f.id,
-      user_id: f.user_id,
-      friend_id: f.friend_id,
-      friend_name: f.friend?.name || 'Unknown',
-      friend_email: f.friend?.email || '',
-      created_at: f.created_at
-    })) || [];
+    if (!friendsData || friendsData.length === 0) {
+      setFriends([]);
+      return;
+    }
 
-    setFriends(friendsData);
+    // Get friend user details separately
+    const friendIds = friendsData.map(f => f.friend_id);
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .in('id', friendIds);
+
+    if (usersError) {
+      console.error('Error loading friend user details:', usersError);
+      return;
+    }
+
+    // Map friend details to friends data
+    const friendsWithDetails = friendsData.map(f => {
+      const friendUser = usersData?.find(u => u.id === f.friend_id);
+      return {
+        id: f.id,
+        user_id: f.user_id,
+        friend_id: f.friend_id,
+        friend_name: friendUser?.name || 'Unknown',
+        friend_email: friendUser?.email || '',
+        created_at: f.created_at
+      };
+    });
+
+    setFriends(friendsWithDetails);
   };
 
   const loadFriendRequests = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
+    const { data: requestsData, error } = await supabase
       .from('friend_requests')
-      .select(`
-        id,
-        sender_id,
-        receiver_id,
-        status,
-        created_at,
-        sender:users!friend_requests_sender_id_fkey(name, email)
-      `)
+      .select('id, sender_id, receiver_id, status, created_at')
       .eq('receiver_id', user.id)
       .eq('status', 'pending');
 
@@ -117,17 +125,35 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    const requestsData = data?.map(r => ({
-      id: r.id,
-      sender_id: r.sender_id,
-      receiver_id: r.receiver_id,
-      sender_name: r.sender?.name || 'Unknown',
-      sender_email: r.sender?.email || '',
-      status: r.status as 'pending' | 'accepted' | 'rejected',
-      created_at: r.created_at
-    })) || [];
+    if (!requestsData || requestsData.length === 0) {
+      setFriendRequests([]);
+      return;
+    }
 
-    setFriendRequests(requestsData);
+    // Get sender user details separately
+    const senderIds = requestsData.map(r => r.sender_id);
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .in('id', senderIds);
+
+    if (usersError) {
+      console.error('Error loading sender user details:', usersError);
+      return;
+    }
+
+    // Map sender details to requests data
+    const requestsWithDetails = requestsData.map(r => {
+      const senderUser = usersData?.find(u => u.id === r.sender_id);
+      return {
+        ...r,
+        sender_name: senderUser?.name || 'Unknown',
+        sender_email: senderUser?.email || '',
+        status: r.status as 'pending' | 'accepted' | 'rejected'
+      };
+    });
+
+    setFriendRequests(requestsWithDetails);
   };
 
   const loadStudySessions = async () => {
@@ -136,17 +162,9 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const friendIds = friends.map(f => f.friend_id);
     const allUserIds = [user.id, ...friendIds];
 
-    const { data, error } = await supabase
+    const { data: sessionsData, error } = await supabase
       .from('study_sessions')
-      .select(`
-        id,
-        user_id,
-        status,
-        subject,
-        started_at,
-        last_active,
-        user:users!study_sessions_user_id_fkey(name)
-      `)
+      .select('id, user_id, status, subject, started_at, last_active')
       .in('user_id', allUserIds);
 
     if (error) {
@@ -154,32 +172,46 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    const sessionsData = data?.map(s => ({
-      id: s.id,
-      user_id: s.user_id,
-      user_name: s.user?.name || 'Unknown',
-      status: s.status as 'studying' | 'break' | 'offline',
-      subject: s.subject,
-      started_at: s.started_at,
-      last_active: s.last_active
-    })) || [];
+    if (!sessionsData || sessionsData.length === 0) {
+      setStudySessions([]);
+      return;
+    }
 
-    setStudySessions(sessionsData);
+    // Get user details separately
+    const userIds = sessionsData.map(s => s.user_id);
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, name')
+      .in('id', userIds);
+
+    if (usersError) {
+      console.error('Error loading session user details:', usersError);
+      return;
+    }
+
+    // Map user details to sessions data
+    const sessionsWithDetails = sessionsData.map(s => {
+      const sessionUser = usersData?.find(u => u.id === s.user_id);
+      return {
+        id: s.id,
+        user_id: s.user_id,
+        user_name: sessionUser?.name || 'Unknown',
+        status: s.status as 'studying' | 'break' | 'offline',
+        subject: s.subject,
+        started_at: s.started_at,
+        last_active: s.last_active
+      };
+    });
+
+    setStudySessions(sessionsWithDetails);
   };
 
   const loadGroupMessages = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
+    const { data: messagesData, error } = await supabase
       .from('group_messages')
-      .select(`
-        id,
-        user_id,
-        message,
-        mentions,
-        created_at,
-        user:users!group_messages_user_id_fkey(name)
-      `)
+      .select('id, user_id, message, mentions, created_at')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -188,16 +220,37 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    const messagesData = data?.map(m => ({
-      id: m.id,
-      user_id: m.user_id,
-      user_name: m.user?.name || 'Unknown',
-      message: m.message,
-      mentions: m.mentions || [],
-      created_at: m.created_at
-    })) || [];
+    if (!messagesData || messagesData.length === 0) {
+      setGroupMessages([]);
+      return;
+    }
 
-    setGroupMessages(messagesData.reverse());
+    // Get user details separately
+    const userIds = [...new Set(messagesData.map(m => m.user_id))];
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, name')
+      .in('id', userIds);
+
+    if (usersError) {
+      console.error('Error loading message user details:', usersError);
+      return;
+    }
+
+    // Map user details to messages data
+    const messagesWithDetails = messagesData.map(m => {
+      const messageUser = usersData?.find(u => u.id === m.user_id);
+      return {
+        id: m.id,
+        user_id: m.user_id,
+        user_name: messageUser?.name || 'Unknown',
+        message: m.message,
+        mentions: m.mentions || [],
+        created_at: m.created_at
+      };
+    });
+
+    setGroupMessages(messagesWithDetails.reverse());
   };
 
   const setupRealtimeSubscriptions = () => {
