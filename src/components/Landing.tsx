@@ -326,12 +326,6 @@ const Landing: React.FC = () => {
             </div>
 
             <div className="text-center">
-              <div className="mb-4">
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
-                  You can also add your name to our supporters list manually:
-                </p>
-                <DonatorForm onAdd={handleDonatorAdd} />
-              </div>
               <button
                 onClick={() => setShowDonationModal(false)}
                 className="px-6 py-3 bg-gradient-to-r from-pink-500 to-red-500 text-white rounded-lg font-semibold hover:from-pink-600 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"

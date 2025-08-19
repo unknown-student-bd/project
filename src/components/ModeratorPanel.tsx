@@ -129,6 +129,25 @@ const ModeratorPanel: React.FC = () => {
     }
   };
 
+  const deleteComplaint = async (complaintId: string) => {
+    if (!confirm('Are you sure you want to delete this complaint?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('complaints')
+        .delete()
+        .eq('id', complaintId);
+
+      if (error) throw error;
+
+      loadComplaints();
+      alert('Complaint deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting complaint:', error);
+      alert('Failed to delete complaint. Please try again.');
+    }
+  };
+
   if (!adminUser) {
     return <AdminLogin onLogin={setAdminUser} />;
   }
@@ -246,6 +265,12 @@ const ModeratorPanel: React.FC = () => {
                               Reply
                             </button>
                           )}
+                          <button
+                            onClick={() => deleteComplaint(complaint.id)}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors duration-200"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     </div>
